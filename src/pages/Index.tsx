@@ -1,51 +1,56 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Upload, Sparkles, Download, Zap, Shield, Globe, Clock, Image, Check } from "lucide-react";
+import { useAuthStore } from "@/lib/auth-store";
 
-const HeroSection = () => (
-  <section className="relative py-20 lg:py-32 overflow-hidden">
-    {/* Background glow effects */}
-    <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
-    <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent/10 rounded-full blur-3xl" />
+const HeroSection = () => {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
-    <div className="container mx-auto px-4 relative z-10">
-      <div className="max-w-4xl mx-auto text-center space-y-8">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-card text-sm text-primary animate-pulse-glow">
-          <Sparkles size={16} />
-          AI-Powered Background Removal
+  return (
+    <section className="relative py-20 lg:py-32 overflow-hidden">
+      {/* Background glow effects */}
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent/10 rounded-full blur-3xl" />
+
+      <div className="container mx-auto px-4 relative z-10">
+        <div className="max-w-4xl mx-auto text-center space-y-8">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-card text-sm text-primary animate-pulse-glow">
+            <Sparkles size={16} />
+            AI-Powered Background Removal
+          </div>
+
+          <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold leading-tight">
+            Remove Backgrounds{" "}
+            <span className="gradient-text">Instantly</span> with AI
+          </h1>
+
+          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
+            Professional background removal in seconds. Upload your image, let AI do the magic, and download your clean result. No design skills needed.
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button variant="cta" size="xl" asChild>
+              <Link to={isAuthenticated ? "/dashboard/upload" : "/register"}>
+                <Upload size={20} />
+                Start Removing Backgrounds
+              </Link>
+            </Button>
+            <Button variant="cta-outline" size="xl" asChild>
+              <Link to="/api-docs">
+                <Globe size={20} />
+                Explore API
+              </Link>
+            </Button>
+          </div>
+
+          <p className="text-sm text-muted-foreground">
+            ✓ 5 free images daily • ✓ No credit card required • ✓ Results in seconds
+          </p>
         </div>
-
-        <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold leading-tight">
-          Remove Backgrounds{" "}
-          <span className="gradient-text">Instantly</span> with AI
-        </h1>
-
-        <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
-          Professional background removal in seconds. Upload your image, let AI do the magic, and download your clean result. No design skills needed.
-        </p>
-
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Button variant="cta" size="xl" asChild>
-            <Link to="/register">
-              <Upload size={20} />
-              Start Removing Backgrounds
-            </Link>
-          </Button>
-          <Button variant="cta-outline" size="xl" asChild>
-            <Link to="/api-docs">
-              <Globe size={20} />
-              Explore API
-            </Link>
-          </Button>
-        </div>
-
-        <p className="text-sm text-muted-foreground">
-          ✓ 5 free images daily • ✓ No credit card required • ✓ Results in seconds
-        </p>
       </div>
-    </div>
-  </section>
-);
+    </section>
+  );
+};
 
 const steps = [
   { icon: Upload, title: "Upload", description: "Drag & drop or browse your image (JPG, PNG, WEBP up to 10MB)" },

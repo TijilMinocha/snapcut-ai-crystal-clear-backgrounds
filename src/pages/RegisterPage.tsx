@@ -1,16 +1,23 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Mail, Lock, User, Eye, EyeOff } from "lucide-react";
 import logo from "@/assets/logo.png";
+import { useAuthStore } from "@/lib/auth-store";
 
 const RegisterPage = () => {
+  const navigate = useNavigate();
+  const login = useAuthStore((state) => state.login);
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    login(email, name);
+    navigate("/dashboard/upload");
   };
 
   return (
@@ -34,14 +41,14 @@ const RegisterPage = () => {
               <Label htmlFor="name">Full Name</Label>
               <div className="relative">
                 <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                <Input id="name" placeholder="John Doe" className="pl-10 bg-muted/50" required />
+                <Input id="name" placeholder="John Doe" className="pl-10 bg-muted/50" value={name} onChange={(e) => setName(e.target.value)} required />
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <div className="relative">
                 <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                <Input id="email" type="email" placeholder="you@example.com" className="pl-10 bg-muted/50" required />
+                <Input id="email" type="email" placeholder="you@example.com" className="pl-10 bg-muted/50" value={email} onChange={(e) => setEmail(e.target.value)} required />
               </div>
             </div>
             <div className="space-y-2">

@@ -1,19 +1,24 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import logo from "@/assets/logo.png";
+import { useAuthStore } from "@/lib/auth-store";
 
 const LoginPage = () => {
+  const navigate = useNavigate();
+  const login = useAuthStore((state) => state.login);
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Will integrate with Supabase Auth
+    // Simple simulation of login
+    login(email);
+    navigate("/dashboard/upload");
   };
 
   return (

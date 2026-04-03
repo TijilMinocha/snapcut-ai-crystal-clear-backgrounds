@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X } from "lucide-react";
+import { Menu, X, LayoutDashboard } from "lucide-react";
 import logo from "@/assets/logo.png";
+import { useAuthStore } from "@/lib/auth-store";
 
 const navLinks = [
   { href: "/features", label: "Features" },
@@ -14,6 +15,7 @@ const navLinks = [
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass-card border-b">
@@ -44,12 +46,23 @@ const Navbar = () => {
         </div>
 
         <div className="hidden md:flex items-center gap-3">
-          <Button variant="ghost" asChild>
-            <Link to="/login">Log in</Link>
-          </Button>
-          <Button variant="cta" asChild>
-            <Link to="/register">Get Started Free</Link>
-          </Button>
+          {isAuthenticated ? (
+            <Button variant="cta" asChild>
+              <Link to="/dashboard/upload">
+                <LayoutDashboard size={18} className="mr-2" />
+                Go to Dashboard
+              </Link>
+            </Button>
+          ) : (
+            <>
+              <Button variant="ghost" asChild>
+                <Link to="/login">Log in</Link>
+              </Button>
+              <Button variant="cta" asChild>
+                <Link to="/register">Get Started Free</Link>
+              </Button>
+            </>
+          )}
         </div>
 
         {/* Mobile toggle */}
@@ -77,12 +90,23 @@ const Navbar = () => {
               </Link>
             ))}
             <div className="flex flex-col gap-2 pt-2 border-t border-border">
-              <Button variant="ghost" asChild>
-                <Link to="/login" onClick={() => setIsOpen(false)}>Log in</Link>
-              </Button>
-              <Button variant="cta" asChild>
-                <Link to="/register" onClick={() => setIsOpen(false)}>Get Started Free</Link>
-              </Button>
+              {isAuthenticated ? (
+                <Button variant="cta" asChild>
+                  <Link to="/dashboard/upload" onClick={() => setIsOpen(false)}>
+                    <LayoutDashboard size={18} className="mr-2" />
+                    Go to Dashboard
+                  </Link>
+                </Button>
+              ) : (
+                <>
+                  <Button variant="ghost" asChild>
+                    <Link to="/login" onClick={() => setIsOpen(false)}>Log in</Link>
+                  </Button>
+                  <Button variant="cta" asChild>
+                    <Link to="/register" onClick={() => setIsOpen(false)}>Get Started Free</Link>
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   Upload,
   LayoutDashboard,
@@ -10,6 +10,7 @@ import {
   Zap,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
+import { useAuthStore } from "@/lib/auth-store";
 
 const sidebarLinks = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -23,6 +24,13 @@ const sidebarLinks = [
 
 const DashboardLayout = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout, user } = useAuthStore();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+  };
 
   return (
     <div className="min-h-screen flex">
@@ -59,7 +67,14 @@ const DashboardLayout = () => {
         </nav>
 
         <div className="p-4 border-t border-border">
-          <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-all w-full">
+          <div className="px-3 py-2 mb-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Account</p>
+            <p className="text-sm font-medium truncate">{user?.email}</p>
+          </div>
+          <button 
+            onClick={handleLogout}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-all w-full text-left"
+          >
             <LogOut size={18} />
             Log out
           </button>
