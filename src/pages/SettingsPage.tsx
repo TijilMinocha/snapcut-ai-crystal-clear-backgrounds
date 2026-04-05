@@ -1,9 +1,41 @@
+import { useState, useEffect } from "react";
 import { Settings, User, Mail, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useAuthStore } from "@/lib/auth-store";
+import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 
 const SettingsPage = () => {
+  const user = useAuthStore((s) => s.user);
+  const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (user?.name) {
+      setName(user.name);
+    }
+  }, [user]);
+
+  const handleUpdateProfile = async () => {
+    if (!user) return;
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: { full_name: name },
+      });
+
+      if (error) throw error;
+      toast.success("Profile updated successfully");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update profile");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-8 max-w-2xl">
       <div>
@@ -19,14 +51,26 @@ const SettingsPage = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Full Name</Label>
-            <Input placeholder="John Doe" className="bg-muted/50" />
+            <Input 
+              value={name} 
+              onChange={(e) => setName(e.target.value)} 
+              placeholder={user?.name || "John Doe"} 
+              className="bg-muted/50" 
+            />
           </div>
           <div className="space-y-2">
             <Label>Email</Label>
-            <Input type="email" placeholder="you@example.com" className="bg-muted/50" disabled />
+            <Input 
+              type="email" 
+              placeholder={user?.email || "you@example.com"} 
+              className="bg-muted/50" 
+              disabled 
+            />
           </div>
         </div>
-        <Button variant="cta" size="sm">Save Changes</Button>
+        <Button variant="cta" size="sm" onClick={handleUpdateProfile} disabled={loading}>
+          {loading ? "Saving..." : "Save Changes"}
+        </Button>
       </div>
 
       {/* Security */}

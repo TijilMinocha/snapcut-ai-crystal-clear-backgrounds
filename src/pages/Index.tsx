@@ -4,7 +4,9 @@ import { Upload, Sparkles, Download, Zap, Shield, Globe, Clock, Image, Check } f
 import { useAuthStore } from "@/lib/auth-store";
 
 const HeroSection = () => {
+  const authReady = useAuthStore((state) => state.authReady);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const showDashboardCta = authReady && isAuthenticated;
 
   return (
     <section className="relative py-20 lg:py-32 overflow-hidden">
@@ -30,21 +32,15 @@ const HeroSection = () => {
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button variant="cta" size="xl" asChild>
-              <Link to={isAuthenticated ? "/dashboard/upload" : "/register"}>
+              <Link to={showDashboardCta ? "/dashboard/upload" : "/register"}>
                 <Upload size={20} />
                 Start Removing Backgrounds
-              </Link>
-            </Button>
-            <Button variant="cta-outline" size="xl" asChild>
-              <Link to="/api-docs">
-                <Globe size={20} />
-                Explore API
               </Link>
             </Button>
           </div>
 
           <p className="text-sm text-muted-foreground">
-            ✓ 5 free images daily • ✓ No credit card required • ✓ Results in seconds
+            ✓ 5 free images per month • ✓ No credit card required • ✓ Results in seconds
           </p>
         </div>
       </div>

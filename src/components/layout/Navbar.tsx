@@ -8,13 +8,13 @@ import { useAuthStore } from "@/lib/auth-store";
 const navLinks = [
   { href: "/features", label: "Features" },
   { href: "/pricing", label: "Pricing" },
-  { href: "/api-docs", label: "API" },
   { href: "/about", label: "About" },
 ];
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const authReady = useAuthStore((state) => state.authReady);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   return (
@@ -45,8 +45,8 @@ const Navbar = () => {
           ))}
         </div>
 
-        <div className="hidden md:flex items-center gap-3">
-          {isAuthenticated ? (
+        <div className="hidden md:flex items-center gap-3 min-h-[40px]">
+          {!authReady ? null : isAuthenticated ? (
             <Button variant="cta" asChild>
               <Link to="/dashboard/upload">
                 <LayoutDashboard size={18} className="mr-2" />
@@ -90,7 +90,7 @@ const Navbar = () => {
               </Link>
             ))}
             <div className="flex flex-col gap-2 pt-2 border-t border-border">
-              {isAuthenticated ? (
+              {!authReady ? null : isAuthenticated ? (
                 <Button variant="cta" asChild>
                   <Link to="/dashboard/upload" onClick={() => setIsOpen(false)}>
                     <LayoutDashboard size={18} className="mr-2" />

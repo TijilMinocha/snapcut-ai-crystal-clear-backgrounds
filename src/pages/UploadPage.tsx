@@ -1,20 +1,38 @@
 import { useState, useCallback } from "react";
-import { Upload, X, Image, Download, Sparkles, Zap, History } from "lucide-react";
+import { Upload, X, Image, Download, Sparkles, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/lib/auth-store";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
+import { isUnlimitedPlan } from "@/lib/user-stats";
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 const UploadPage = () => {
-  const { credits, useCredit, addToHistory } = useAuthStore();
+  const userStats = useAuthStore((s) => s.userStats);
+  const userStatsLoading = useAuthStore((s) => s.userStatsLoading);
+  const fetchUserStats = useAuthStore((s) => s.fetchUserStats);
+  const consumeImageCredit = useAuthStore((s) => s.consumeImageCredit);
+  const addToHistory = useAuthStore((s) => s.addToHistory);
+
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const plan = userStats?.plan ?? "free";
+  const creditsRemaining = userStats?.credits_remaining ?? 0;
+  const canProcessFree = creditsRemaining > 0;
+  const canProcess = isUnlimitedPlan(plan) || canProcessFree;
+
+  const creditsLabel = userStatsLoading
+    ? "…"
+    : isUnlimitedPlan(plan)
+      ? "Unlimited"
+      : `${creditsRemaining} / 5`;
 
   const validateAndSetFile = useCallback((f: File) => {
     setError(null);
@@ -43,21 +61,19 @@ const UploadPage = () => {
 
   const handleProcess = async () => {
     if (!file) return;
-    
-    if (credits <= 0) {
-      setError("You don't have enough credits. Please upgrade your plan.");
+
+    if (!canProcess) {
+      setError("You don't have enough credits this month. Please upgrade your plan.");
       return;
     }
 
     setProcessing(true);
     setError(null);
-    
+
     try {
-      // Prepare form data for binary file upload
       const formData = new FormData();
       formData.append("image", file);
 
-      // Call the n8n production webhook
       const response = await fetch("https://tm-dev.app.n8n.cloud/webhook/remove-bg-snapcut", {
         method: "POST",
         body: formData,
@@ -68,18 +84,25 @@ const UploadPage = () => {
       }
 
       const data = await response.json();
-      
+
       if (data && data.url) {
         setResult(data.url);
-        // Only use credit if successful
-        useCredit();
-        // Add to history
-        addToHistory({
-          originalName: file.name,
-          originalUrl: preview || "",
-          resultUrl: data.url,
-          size: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
-        });
+        const { ok, error: creditErr } = await consumeImageCredit();
+        if (!ok) {
+          if (creditErr === "no_credits") {
+            toast.error("Could not apply credit — monthly limit may have been reached.");
+          } else {
+            toast.error("Image processed but credits could not be updated. Try refreshing.");
+          }
+          await fetchUserStats();
+        } else {
+          addToHistory({
+            originalName: file.name,
+            originalUrl: preview || "",
+            resultUrl: data.url,
+            size: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
+          });
+        }
       } else {
         throw new Error("Invalid response from the server.");
       }
@@ -100,7 +123,7 @@ const UploadPage = () => {
 
   const handleDownload = async () => {
     if (!result) return;
-    
+
     try {
       const response = await fetch(result);
       const blob = await response.blob();
@@ -114,7 +137,6 @@ const UploadPage = () => {
       document.body.removeChild(a);
     } catch (err) {
       console.error("Download failed:", err);
-      // Fallback: try opening in a new tab if blob download fails (e.g., CORS)
       window.open(result, "_blank");
     }
   };
@@ -129,11 +151,13 @@ const UploadPage = () => {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Remove background from your image in seconds</p>
         </div>
-        
+
         <div className="flex items-center gap-3">
           <div className="glass-card px-4 py-2 rounded-lg flex items-center gap-2 border-primary/20">
             <Zap size={16} className="text-primary fill-primary/20" />
-            <span className="text-sm font-semibold">{credits} Credits Left</span>
+            <span className="text-sm font-semibold">
+              {isUnlimitedPlan(plan) ? "Credits: Unlimited" : `Credits left: ${creditsLabel} this month`}
+            </span>
           </div>
           <Button variant="outline" size="sm" asChild className="h-9">
             <Link to="/dashboard/credits">Get More</Link>
@@ -144,9 +168,11 @@ const UploadPage = () => {
       {!file ? (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
-            {/* Upload zone */}
             <div
-              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragging(true);
+              }}
               onDragLeave={() => setIsDragging(false)}
               onDrop={handleDrop}
               className={`glass-card rounded-xl border-2 border-dashed p-16 text-center cursor-pointer transition-all h-[400px] flex flex-col items-center justify-center ${
@@ -209,16 +235,17 @@ const UploadPage = () => {
           </div>
         </div>
       ) : (
-        /* Preview & process */
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Original */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-semibold flex items-center gap-2">
                   <Image size={16} className="text-primary" /> Original Image
                 </span>
-                <button onClick={reset} className="text-muted-foreground hover:text-foreground transition-colors p-1 hover:bg-muted rounded">
+                <button
+                  onClick={reset}
+                  className="text-muted-foreground hover:text-foreground transition-colors p-1 hover:bg-muted rounded"
+                >
                   <X size={18} />
                 </button>
               </div>
@@ -231,14 +258,15 @@ const UploadPage = () => {
               </div>
             </div>
 
-            {/* Result */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-semibold flex items-center gap-2">
                   <Sparkles size={16} className="text-accent" /> AI Result
                 </span>
                 {result && (
-                  <span className="text-[10px] bg-accent/10 text-accent px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Ready</span>
+                  <span className="text-[10px] bg-accent/10 text-accent px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                    Ready
+                  </span>
                 )}
               </div>
               <div className="glass-card rounded-xl p-2 aspect-square relative bg-[repeating-conic-gradient(hsl(var(--muted))_0%_25%,transparent_0%_50%)] bg-[length:24px_24px] border-accent/10">
@@ -267,7 +295,7 @@ const UploadPage = () => {
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
             {!result ? (
-              <Button variant="cta" size="xl" onClick={handleProcess} disabled={processing || credits <= 0} className="min-w-[240px]">
+              <Button variant="cta" size="xl" onClick={handleProcess} disabled={processing || !canProcess} className="min-w-[240px]">
                 {processing ? (
                   <>
                     <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mr-2" />
@@ -291,10 +319,14 @@ const UploadPage = () => {
               </>
             )}
           </div>
-          
-          {credits <= 0 && !result && !processing && (
+
+          {!canProcess && !result && !processing && (
             <p className="text-center text-sm text-destructive font-medium">
-              You've run out of credits. <Link to="/dashboard/credits" className="underline">Get more credits</Link> to continue.
+              You've used all free credits this month.{" "}
+              <Link to="/dashboard/credits" className="underline">
+                Upgrade to Pro for 10 images/month
+              </Link>{" "}
+              to continue.
             </p>
           )}
         </div>
