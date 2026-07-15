@@ -9,11 +9,13 @@ const DashboardPage = () => {
   const userStats = useAuthStore((s) => s.userStats);
   const userStatsLoading = useAuthStore((s) => s.userStatsLoading);
   const fetchUserStats = useAuthStore((s) => s.fetchUserStats);
+  const fetchHistory = useAuthStore((s) => s.fetchHistory);
   const history = useAuthStore((s) => s.history);
 
   useEffect(() => {
     void fetchUserStats();
-  }, [fetchUserStats]);
+    void fetchHistory();
+  }, [fetchUserStats, fetchHistory]);
 
   const plan = userStats?.plan ?? "free";
   const totalLifetime = userStats?.total_images_processed ?? 0;

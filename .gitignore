@@ -12,6 +12,14 @@ dist
 dist-ssr
 *.local
 
+# Env files (never commit secrets — anon key is public, but service/API keys are not)
+.env
+.env.*
+!.env.example
+
+# Vercel
+.vercel
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

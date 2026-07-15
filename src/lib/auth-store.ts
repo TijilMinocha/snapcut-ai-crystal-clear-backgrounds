@@ -1,8 +1,8 @@
 import type { Session } from "@supabase/supabase-js";
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import { supabase } from "@/lib/supabase";
 import type { UserStatsRow } from "@/lib/user-stats";
+import { deleteUpload, fetchUploads } from "@/lib/uploads";
 
 interface User {
   id: string;
@@ -66,6 +66,7 @@ interface AuthState {
   userStats: UserStatsRow | null;
   userStatsLoading: boolean;
   history: HistoryItem[];
+  historyLoading: boolean;
   initializeAuth: () => Promise<void>;
   syncFromSession: (session: Session | null) => void;
   fetchUserStats: () => Promise<void>;
@@ -79,19 +80,18 @@ interface AuthState {
   signInWithGoogle: () => Promise<{ error: string | null }>;
   resetPasswordForEmail: (email: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
-  addToHistory: (item: Omit<HistoryItem, "id" | "timestamp">) => void;
-  removeFromHistory: (id: string) => void;
+  fetchHistory: () => Promise<void>;
+  removeFromHistory: (id: string) => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set, get) => ({
+export const useAuthStore = create<AuthState>()((set, get) => ({
       user: null,
       isAuthenticated: false,
       authReady: false,
       userStats: null,
       userStatsLoading: false,
       history: [],
+      historyLoading: false,
 
       syncFromSession: (session) => {
         const user = mapUser(session);
@@ -157,7 +157,7 @@ export const useAuthStore = create<AuthState>()(
           if (session?.user) {
             await get().fetchUserStats();
           } else {
-            set({ userStats: null });
+            set({ userStats: null, history: [] });
           }
           set({ authReady: true });
           supabase.auth.onAuthStateChange(async (_event, nextSession) => {
@@ -165,7 +165,7 @@ export const useAuthStore = create<AuthState>()(
             if (nextSession?.user) {
               await get().fetchUserStats();
             } else {
-              set({ userStats: null });
+              set({ userStats: null, history: [] });
             }
           });
         })();
@@ -210,31 +210,35 @@ export const useAuthStore = create<AuthState>()(
 
       signOut: async () => {
         await supabase.auth.signOut();
-        set({ userStats: null });
+        set({ userStats: null, history: [] });
       },
 
-      addToHistory: (item) => {
-        const newItem: HistoryItem = {
-          ...item,
-          id: Math.random().toString(36).slice(2, 11),
-          timestamp: Date.now(),
-        };
-        set((state) => ({
-          history: [newItem, ...state.history],
-        }));
+      fetchHistory: async () => {
+        if (!get().user?.id) {
+          set({ history: [], historyLoading: false });
+          return;
+        }
+        set({ historyLoading: true });
+        try {
+          const items = await fetchUploads();
+          set({ history: items, historyLoading: false });
+        } catch (err) {
+          console.error("fetchHistory:", err);
+          set({ historyLoading: false });
+        }
       },
 
-      removeFromHistory: (id) => {
-        set((state) => ({
-          history: state.history.filter((item) => item.id !== id),
-        }));
+      removeFromHistory: async (id) => {
+        const prev = get().history;
+        // optimistic removal
+        set({ history: prev.filter((item) => item.id !== id) });
+        try {
+          await deleteUpload(id);
+        } catch (err) {
+          console.error("removeFromHistory:", err);
+          // restore on failure
+          set({ history: prev });
+        }
       },
-    }),
-    {
-      name: "snapcut-auth-v3",
-      partialize: (state) => ({
-        history: state.history,
-      }),
-    }
-  )
+    })
 );

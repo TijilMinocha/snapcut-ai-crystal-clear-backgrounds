@@ -1,10 +1,18 @@
+import { useEffect } from "react";
 import { History, Download, Trash2, ExternalLink, Image as ImageIcon, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/lib/auth-store";
 import { format } from "date-fns";
 
 const HistoryPage = () => {
-  const { history, removeFromHistory } = useAuthStore();
+  const history = useAuthStore((s) => s.history);
+  const historyLoading = useAuthStore((s) => s.historyLoading);
+  const fetchHistory = useAuthStore((s) => s.fetchHistory);
+  const removeFromHistory = useAuthStore((s) => s.removeFromHistory);
+
+  useEffect(() => {
+    void fetchHistory();
+  }, [fetchHistory]);
 
   const handleDownload = async (url: string, name: string) => {
     try {
@@ -39,7 +47,12 @@ const HistoryPage = () => {
         </div>
       </div>
 
-      {history.length === 0 ? (
+      {historyLoading && history.length === 0 ? (
+        <div className="glass-card rounded-2xl p-20 text-center border-dashed border-2">
+          <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-6" />
+          <p className="text-sm text-muted-foreground">Loading your history…</p>
+        </div>
+      ) : history.length === 0 ? (
         <div className="glass-card rounded-2xl p-20 text-center border-dashed border-2">
           <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-6">
             <ImageIcon size={28} className="text-muted-foreground/50" />

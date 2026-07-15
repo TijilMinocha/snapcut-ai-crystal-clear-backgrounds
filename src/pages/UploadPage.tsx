@@ -3,8 +3,8 @@ import { Upload, X, Image, Download, Sparkles, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/lib/auth-store";
 import { Link } from "react-router-dom";
-import { toast } from "sonner";
 import { isUnlimitedPlan } from "@/lib/user-stats";
+import { removeBackground } from "@/lib/remove-bg";
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -13,8 +13,7 @@ const UploadPage = () => {
   const userStats = useAuthStore((s) => s.userStats);
   const userStatsLoading = useAuthStore((s) => s.userStatsLoading);
   const fetchUserStats = useAuthStore((s) => s.fetchUserStats);
-  const consumeImageCredit = useAuthStore((s) => s.consumeImageCredit);
-  const addToHistory = useAuthStore((s) => s.addToHistory);
+  const fetchHistory = useAuthStore((s) => s.fetchHistory);
 
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -71,44 +70,20 @@ const UploadPage = () => {
     setError(null);
 
     try {
-      const formData = new FormData();
-      formData.append("image", file);
-
-      const response = await fetch("https://tm-dev.app.n8n.cloud/webhook/remove-bg-snapcut", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error(`Server error: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-
-      if (data && data.url) {
-        setResult(data.url);
-        const { ok, error: creditErr } = await consumeImageCredit();
-        if (!ok) {
-          if (creditErr === "no_credits") {
-            toast.error("Could not apply credit — monthly limit may have been reached.");
-          } else {
-            toast.error("Image processed but credits could not be updated. Try refreshing.");
-          }
-          await fetchUserStats();
-        } else {
-          addToHistory({
-            originalName: file.name,
-            originalUrl: preview || "",
-            resultUrl: data.url,
-            size: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
-          });
-        }
-      } else {
-        throw new Error("Invalid response from the server.");
-      }
+      const { url } = await removeBackground(file);
+      setResult(url);
+      // Credits are consumed and history is written server-side — pull the
+      // fresh state back so the UI reflects it.
+      await Promise.all([fetchUserStats(), fetchHistory()]);
     } catch (err) {
       console.error("Error processing image:", err);
-      setError(err instanceof Error ? err.message : "Failed to remove background. Please try again.");
+      const msg = err instanceof Error ? err.message : "Failed to remove background. Please try again.";
+      if (msg === "no_credits") {
+        setError("You don't have enough credits this month. Please upgrade your plan.");
+        await fetchUserStats();
+      } else {
+        setError(msg);
+      }
     } finally {
       setProcessing(false);
     }
