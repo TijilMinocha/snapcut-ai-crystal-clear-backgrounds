@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { bearerToken, getSupabaseEnv, readJsonBody, userClient } from "./_lib/util";
-import { getCloudinary } from "./_lib/cloudinary";
+import { bearerToken, getSupabaseEnv, readJsonBody, userClient } from "./_lib/util.js";
+import { getCloudinary } from "./_lib/cloudinary.js";
 
 /**
  * Delete one history item: destroy the Cloudinary assets (needs the API
